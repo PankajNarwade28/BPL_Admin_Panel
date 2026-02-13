@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
-import axios from 'axios';
-import './App.css';
-import AdminPanel from './components/AdminPanel';
+import React, { useState, useEffect } from "react";
+import io from "socket.io-client";
+import axios from "axios";
+import "./App.css";
+import AdminPanel from "./components/AdminPanel";
 
-// const SOCKET_URL = 'https://aplplayerauction.onrender.com/';
-// const API_URL = 'https://aplplayerauction.onrender.com/api';
-const SOCKET_URL = 'http://localhost:5000/'
-const API_URL = 'http://localhost:5000/api'
+const SOCKET_URL = "http://localhost:5000/";
+const API_URL = "http://localhost:5000/api";
 
 // Default placeholder image (SVG data URL)
 const PLACEHOLDER_IMAGE = `${SOCKET_URL}/uploads/wwplaceholder.jpg`;
@@ -15,28 +13,36 @@ const PLACEHOLDER_IMAGE = `${SOCKET_URL}/uploads/wwplaceholder.jpg`;
 function App() {
   const [socket, setSocket] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState('auction');
-  
+  const [password, setPassword] = useState("");
+
   // Auction state
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [auctionState, setAuctionState] = useState(null);
-  
+
   // Auto auction state
   const [autoAuctionStatus, setAutoAuctionStatus] = useState({
     isActive: false,
     queueLength: 0,
     unsoldCount: 0,
-    totalRemaining: 0
+    totalRemaining: 0,
   });
-  
+
   // Stats
-  const [stats, setStats] = useState({ totalPlayers: 0, soldPlayers: 0, unsoldPlayers: 0 });
-  
+  const [stats, setStats] = useState({
+    totalPlayers: 0,
+    soldPlayers: 0,
+    unsoldPlayers: 0,
+  });
+
   // Create captain form
-  const [captainForm, setCaptainForm] = useState({ teamName: '', captainName: '', teamId: '', pin: '' });
-  
+  const [captainForm, setCaptainForm] = useState({
+    teamName: "",
+    captainName: "",
+    teamId: "",
+    pin: "",
+  });
+
   // Edit modals
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [editingTeam, setEditingTeam] = useState(null);
@@ -47,136 +53,142 @@ function App() {
     const newSocket = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10
+      reconnectionAttempts: 10,
     });
     setSocket(newSocket);
 
     // Check for saved admin session
-    const savedAdminAuth = localStorage.getItem('admin_authenticated');
-    const savedPassword = localStorage.getItem('admin_password');
-    
-    if (savedAdminAuth === 'true' && savedPassword) {
+    const savedAdminAuth = localStorage.getItem("admin_authenticated");
+    const savedPassword = localStorage.getItem("admin_password");
+
+    if (savedAdminAuth === "true" && savedPassword) {
       setPassword(savedPassword);
       // Auto-login with saved credentials
-      newSocket.emit('admin:login', { password: savedPassword });
+      newSocket.emit("admin:login", { password: savedPassword });
     }
 
     // Handle connection events
-    newSocket.on('connect', () => {
-      console.log('Admin panel connected');
-      if (savedAdminAuth === 'true' && savedPassword) {
-        newSocket.emit('admin:login', { password: savedPassword });
+    newSocket.on("connect", () => {
+      console.log("Admin panel connected");
+      if (savedAdminAuth === "true" && savedPassword) {
+        newSocket.emit("admin:login", { password: savedPassword });
       }
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Admin panel disconnected');
+    newSocket.on("disconnect", () => {
+      console.log("Admin panel disconnected");
     });
 
-    newSocket.on('reconnect', () => {
-      console.log('Admin panel reconnected');
-      if (savedAdminAuth === 'true' && savedPassword) {
-        newSocket.emit('admin:login', { password: savedPassword });
+    newSocket.on("reconnect", () => {
+      console.log("Admin panel reconnected");
+      if (savedAdminAuth === "true" && savedPassword) {
+        newSocket.emit("admin:login", { password: savedPassword });
       }
       loadData(); // Reload data on reconnection
     });
 
-    newSocket.on('auth:success', () => {
+    newSocket.on("auth:success", () => {
       setIsAuthenticated(true);
       loadData();
     });
 
-    newSocket.on('auth:error', (data) => {
+    newSocket.on("auth:error", (data) => {
       alert(data.message);
       // Clear invalid session
-      localStorage.removeItem('admin_authenticated');
-      localStorage.removeItem('admin_password');
+      localStorage.removeItem("admin_authenticated");
+      localStorage.removeItem("admin_password");
     });
 
-    newSocket.on('auction:state', (data) => {
+    newSocket.on("auction:state", (data) => {
       setAuctionState(data.state);
     });
 
-    newSocket.on('teams:status', (data) => {
+    newSocket.on("teams:status", (data) => {
       setTeams(data.teams);
     });
 
     // Listen for player sold to update player list and stats
-    newSocket.on('player:sold', (data) => {
+    newSocket.on("player:sold", (data) => {
       // Reload data to get updated player statuses and team info
       loadData();
     });
 
     // Listen for auction started to update player status
-    newSocket.on('auction:started', (data) => {
+    newSocket.on("auction:started", (data) => {
       // Update the specific player's status
-      setPlayers(prev => prev.map(p => 
-        p._id === data.player._id ? { ...p, status: 'IN_AUCTION' } : p
-      ));
+      setPlayers((prev) =>
+        prev.map((p) =>
+          p._id === data.player._id ? { ...p, status: "IN_AUCTION" } : p,
+        ),
+      );
     });
 
     // Listen for bid updates (optional - for real-time bid display)
-    newSocket.on('bid:new', (data) => {
-      setAuctionState(prev => prev ? {
-        ...prev,
-        currentHighBid: {
-          amount: data.amount,
-          team: { teamName: data.teamName }
-        }
-      } : prev);
+    newSocket.on("bid:new", (data) => {
+      setAuctionState((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentHighBid: {
+                amount: data.amount,
+                team: { teamName: data.teamName },
+              },
+            }
+          : prev,
+      );
     });
 
     // Auto auction events
-    newSocket.on('autoAuction:started', (data) => {
-      setAutoAuctionStatus(prev => ({
+    newSocket.on("autoAuction:started", (data) => {
+      setAutoAuctionStatus((prev) => ({
         ...prev,
         isActive: true,
         queueLength: data.queueLength,
-        totalRemaining: data.totalPlayers
+        totalRemaining: data.totalPlayers,
       }));
     });
 
-    newSocket.on('autoAuction:queueUpdate', (data) => {
-      setAutoAuctionStatus(prev => ({
+    newSocket.on("autoAuction:queueUpdate", (data) => {
+      setAutoAuctionStatus((prev) => ({
         ...prev,
         queueLength: data.queueLength,
         unsoldCount: data.unsoldCount,
-        totalRemaining: data.totalRemaining
+        totalRemaining: data.totalRemaining,
       }));
     });
 
-    newSocket.on('autoAuction:playerUnsold', (data) => {
-      setAutoAuctionStatus(prev => ({
+    newSocket.on("autoAuction:playerUnsold", (data) => {
+      setAutoAuctionStatus((prev) => ({
         ...prev,
-        unsoldCount: data.unsoldCount
+        unsoldCount: data.unsoldCount,
       }));
     });
 
-    newSocket.on('autoAuction:unsoldRound', (data) => {
-      alert(data.message + ' (' + data.count + ' players)');
+    newSocket.on("autoAuction:unsoldRound", (data) => {
+      alert(data.message + " (" + data.count + " players)");
     });
 
-    newSocket.on('autoAuction:completed', (data) => {
+    newSocket.on("autoAuction:completed", (data) => {
       alert(data.message);
       setAutoAuctionStatus({
         isActive: false,
         queueLength: 0,
         unsoldCount: 0,
-        totalRemaining: 0
+        totalRemaining: 0,
       });
       loadData();
     });
 
-    newSocket.on('autoAuction:stopped', (data) => {
+    newSocket.on("autoAuction:stopped", (data) => {
       setAutoAuctionStatus({
         isActive: false,
         queueLength: data.remainingInQueue,
         unsoldCount: data.unsoldCount,
-        totalRemaining: data.remainingInQueue + data.unsoldCount
+        totalRemaining: data.remainingInQueue + data.unsoldCount,
       });
     });
 
-    newSocket.on('autoAuction:status', (data) => {
+    newSocket.on("autoAuction:status", (data) => {
       setAutoAuctionStatus(data);
     });
 
@@ -198,38 +210,38 @@ function App() {
       const [playersRes, teamsRes, statsRes] = await Promise.all([
         axios.get(`${API_URL}/players`),
         axios.get(`${API_URL}/teams`),
-        axios.get(`${API_URL}/auction/stats`)
+        axios.get(`${API_URL}/auction/stats`),
       ]);
-      
+
       setPlayers(playersRes.data.players || []);
       setTeams(teamsRes.data.teams || []);
       setStats(statsRes.data.stats || {});
     } catch (error) {
-      console.error('Load error:', error);
+      console.error("Load error:", error);
     }
   };
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (socket) {
-      socket.emit('admin:login', { password });
+      socket.emit("admin:login", { password });
       // Save credentials on successful manual login
-      socket.once('auth:success', () => {
-        localStorage.setItem('admin_authenticated', 'true');
-        localStorage.setItem('admin_password', password);
+      socket.once("auth:success", () => {
+        localStorage.setItem("admin_authenticated", "true");
+        localStorage.setItem("admin_password", password);
       });
     }
   };
 
-  // const handleLogout = () => {
-  //   localStorage.removeItem('admin_authenticated');
-  //   localStorage.removeItem('admin_password');
-  //   window.location.reload();
-  // };
+  const handleLogout = () => {
+    localStorage.removeItem("admin_authenticated");
+    localStorage.removeItem("admin_password");
+    window.location.reload();
+  };
 
   // const handleClearAllData = async () => {
   //   const confirmMessage = 'Are you sure you want to clear ALL data?\n\nThis will delete:\n- All players\n- All teams\n- All bids\n- Auction state\n\nThis action CANNOT be undone!';
-    
+
   //   if (!window.confirm(confirmMessage)) {
   //     return;
   //   }
@@ -293,12 +305,12 @@ function App() {
   //   try {
   //     const response = await axios.post(`${API_URL}/admin/generate-teams`, { count: 20 });
   //     alert(`${response.data.teams.length} teams created successfully!`);
-      
+
   //     // Display PINs (only shown once)
   //     const pins = response.data.teams.map(t => `${t.teamId}: ${t.pin}`).join('\n');
   //     console.log('Team PINs (save these!):\n', pins);
   //     alert('Team PINs have been logged to console. Save them now!');
-      
+
   //     loadData();
   //   } catch (error) {
   //     alert('Error generating teams: ' + error.message);
@@ -322,7 +334,7 @@ function App() {
   //   try {
   //     const response = await axios.post(`${API_URL}/admin/create-captain`, captainForm);
   //     alert(`Captain created!\n\nTeam ID: ${response.data.team.teamId}\nPIN: ${response.data.team.pin}\n\nSave this PIN - it won't be shown again!`);
-      
+
   //     // Reset form
   //     setCaptainForm({ teamName: '', captainName: '', teamId: '', pin: '' });
   //     loadData();
@@ -437,8 +449,8 @@ function App() {
   }
 
   return (
-    <> 
-    <AdminPanel/>
+    <>
+      <AdminPanel />
     </>
   );
 }

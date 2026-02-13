@@ -1,35 +1,51 @@
 import React from 'react';
 import { Play, Pause, Square, Zap, Clock, Package } from 'lucide-react';
+import { io } from 'socket.io-client';
 import PlayerCard from './PlayerCard';
 
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:4000'; // Fallback to localhost if not set
 const AuctionControl = ({ 
   players, 
   auctionState, 
   autoAuctionStatus, 
-  setAuctionState,
-  setAutoAuctionStatus 
-}) => {
-  const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
-  const PLACEHOLDER_IMAGE = '/placeholder-player.png';
-
-  const startAutoAuction = () => {
-    console.log('Starting auto auction...');
-  };
-
-  const stopAutoAuction = () => {
-    console.log('Stopping auto auction...');
-  };
-
-  const startAuction = (playerId) => {
-    console.log('Starting auction for player:', playerId);
+  socket, // Accept socket as a prop instead
+  socketUrl // Pass the URL down for images
+}) => { 
+  const PLACEHOLDER_IMAGE = `${socketUrl}/placeholder-player.png`; 
+ const startAuction = (playerId) => {
+    if (socket) {
+      socket.emit('admin:startAuction', { playerId });
+    }
   };
 
   const pauseAuction = () => {
-    console.log('Pausing auction...');
+    if (socket) socket.emit('admin:pauseAuction');
   };
 
   const resumeAuction = () => {
-    console.log('Resuming auction...');
+    if (socket) socket.emit('admin:resumeAuction');
+  };
+
+  const undoSale = (playerId) => {
+    if (window.confirm('Are you sure you want to undo this sale?')) {
+      if (socket) socket.emit('admin:undoSale', { playerId });
+    }
+  };
+
+  const startAutoAuction = () => {
+    if (window.confirm('Start automatic auction for all available players?\n\nPlayers will be auctioned from highest to lowest base price.\nUnsold players will be added back to the queue.')) {
+      if (socket) {
+        socket.emit('admin:startAutoAuction');
+      }
+    }
+  };
+
+  const stopAutoAuction = () => {
+    if (window.confirm('Stop automatic auction?')) {
+      if (socket) {
+        socket.emit('admin:stopAutoAuction');
+      }
+    }
   };
 
   const unsoldPlayers = players.filter(p => p.status === 'UNSOLD');

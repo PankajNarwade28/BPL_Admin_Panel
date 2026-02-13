@@ -1,6 +1,8 @@
 import React from 'react';
 import { Play, DollarSign } from 'lucide-react';
 
+const SOCKET_URL = 'http://localhost:5000'
+
 const PlayerCard = ({ player, onStart, disabled, socketUrl, placeholderImage }) => {
   const getCategoryStyle = (category) => {
     const styles = {
@@ -14,7 +16,7 @@ const PlayerCard = ({ player, onStart, disabled, socketUrl, placeholderImage }) 
 
   const imageUrl = player.photo?.startsWith('http') 
     ? player.photo 
-    : `${socketUrl}/uploads${player.photo}`;
+    : `${SOCKET_URL}${player.photo}`;
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300">
