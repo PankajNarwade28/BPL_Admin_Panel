@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { Download, Edit2, Trash2, Users, Award } from 'lucide-react';
 import EditTeamModal from './EditTeamModal';
 
-const TeamsPanel = ({ teams, setTeams }) => {
+const TeamsPanel = ({ teams, setTeams, loadData, deleteTeam, updateTeam }) => {
   const [editingTeam, setEditingTeam] = useState(null);
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  const deleteTeam = (teamId) => {
-    if (window.confirm('Are you sure you want to delete this team?')) {
-      console.log('Deleting team:', teamId);
-    }
+  const handleUpdateTeam = async (updatedTeam) => {
+    await updateTeam(updatedTeam);
+    setEditingTeam(null);
   };
 
   const openEditTeam = (team) => {
@@ -157,10 +156,7 @@ const TeamsPanel = ({ teams, setTeams }) => {
         <EditTeamModal
           team={editingTeam}
           onClose={() => setEditingTeam(null)}
-          onUpdate={(updatedTeam) => {
-            console.log('Updating team:', updatedTeam);
-            setEditingTeam(null);
-          }}
+          onUpdate={handleUpdateTeam}
         />
       )}
     </div>

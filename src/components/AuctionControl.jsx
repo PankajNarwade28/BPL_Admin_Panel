@@ -1,6 +1,5 @@
 import React from 'react';
 import { Play, Pause, Square, Zap, Clock, Package } from 'lucide-react';
-import { io } from 'socket.io-client';
 import PlayerCard from './PlayerCard';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:4000'; // Fallback to localhost if not set
@@ -24,12 +23,6 @@ const AuctionControl = ({
 
   const resumeAuction = () => {
     if (socket) socket.emit('admin:resumeAuction');
-  };
-
-  const undoSale = (playerId) => {
-    if (window.confirm('Are you sure you want to undo this sale?')) {
-      if (socket) socket.emit('admin:undoSale', { playerId });
-    }
   };
 
   const startAutoAuction = () => {

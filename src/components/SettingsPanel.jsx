@@ -1,29 +1,72 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { UserPlus, Users, RotateCcw, RefreshCw, Info } from 'lucide-react';
-
-const SettingsPanel = () => {
+ 
+const API_URL = "http://localhost:5000/api";
+const SettingsPanel = ({ loadData }) => {
   const [captainForm, setCaptainForm] = useState({
     teamName: '',
     captainName: '',
     teamId: '',
     pin: ''
   });
+  
 
-  const createCaptain = (e) => {
-    e.preventDefault();
-    console.log('Creating captain:', captainForm);
-    setCaptainForm({ teamName: '', captainName: '', teamId: '', pin: '' });
-  };
+  const generateTeams = async () => {
+    try {
+      const response = await axios.post(`${API_URL}/admin/generate-teams`, {
+        count: 20,
+      });
+      alert(`${response.data.teams.length} teams created successfully!`);
 
-  const generateTeams = () => {
-    if (window.confirm('Generate 20 teams with random credentials?')) {
-      console.log('Generating 20 teams...');
+      // Display PINs (only shown once)
+      const pins = response.data.teams
+        .map((t) => `${t.teamId}: ${t.pin}`)
+        .join("\n");
+      console.log("Team PINs (save these!):\n", pins);
+      alert("Team PINs have been logged to console. Save them now!");
+
+      loadData();
+    } catch (error) {
+      alert("Error generating teams: " + error.message);
     }
   };
 
-  const resetAuction = () => {
-    if (window.confirm('⚠️ This will reset all auction data. Are you sure?')) {
-      console.log('Resetting auction...');
+  const resetAuction = async () => {
+    if (
+      window.confirm(
+        "Reset entire auction? This will clear all bids and team rosters.",
+      )
+    ) {
+      try {
+        await axios.post(`${API_URL}/admin/reset`);
+        alert("Auction reset successfully!");
+        loadData();
+      } catch (error) {
+        alert("Error resetting auction: " + error.message);
+      }
+    }
+  };
+
+  const createCaptain = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        `${API_URL}/admin/create-captain`,
+        captainForm,
+      );
+      alert(
+        `Captain created!\n\nTeam ID: ${response.data.team.teamId}\nPIN: ${response.data.team.pin}\n\nSave this PIN - it won't be shown again!`,
+      );
+
+      // Reset form
+      setCaptainForm({ teamName: "", captainName: "", teamId: "", pin: "" });
+      loadData();
+    } catch (error) {
+      alert(
+        "Error creating captain: " +
+          (error.response?.data?.message || error.message),
+      );
     }
   };
 

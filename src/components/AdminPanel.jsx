@@ -13,9 +13,9 @@ const API_URL = "http://localhost:5000/api";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState("auction");
-  const [password, setPassword]= useState('')
   const [socket, setSocket] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
   const [stats, setStats] = useState({
     totalPlayers: 0,
     soldPlayers: 0,
@@ -236,6 +236,89 @@ const AdminPanel = () => {
     }
   };
 
+  // Player management functions
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('csvFile', file);
+
+    try {
+      const response = await axios.post(`${API_URL}/players/bulk-upload`, formData);
+      alert(response.data.message);
+      loadData();
+    } catch (error) {
+      alert('Upload error: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const deletePlayer = async (playerId) => {
+    if (window.confirm('Are you sure you want to delete this player?')) {
+      try {
+        await axios.delete(`${API_URL}/players/${playerId}`);
+        alert('Player deleted successfully!');
+        loadData();
+      } catch (error) {
+        alert('Error deleting player: ' + (error.response?.data?.message || error.message));
+      }
+    }
+  };
+
+  const undoSale = (playerId) => {
+    if (window.confirm('Are you sure you want to undo this sale?')) {
+      if (socket) {
+        socket.emit('admin:undoSale', { playerId });
+        // Reload data after a brief delay to allow server to process
+        setTimeout(() => loadData(), 500);
+      }
+    }
+  };
+
+  const updatePlayer = async (updatedPlayer) => {
+    try {
+      await axios.put(`${API_URL}/players/${updatedPlayer._id}`, {
+        name: updatedPlayer.name,
+        category: updatedPlayer.category,
+        basePrice: updatedPlayer.basePrice
+      });
+      alert('Player updated successfully!');
+      loadData();
+    } catch (error) {
+      alert('Error updating player: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // Team management functions
+  const deleteTeam = async (teamId) => {
+    if (window.confirm('Are you sure you want to delete this team?')) {
+      try {
+        await axios.delete(`${API_URL}/teams/${teamId}`);
+        alert('Team deleted successfully!');
+        loadData();
+      } catch (error) {
+        alert('Error deleting team: ' + (error.response?.data?.message || error.message));
+      }
+    }
+  };
+
+  const updateTeam = async (updatedTeam) => {
+    try {
+      const updateData = {
+        teamName: updatedTeam.teamName,
+        captainName: updatedTeam.captainName,
+        teamId: updatedTeam.teamId
+      };
+      if (updatedTeam.pin) {
+        updateData.pin = updatedTeam.pin;
+      }
+      await axios.put(`${API_URL}/teams/${updatedTeam._id}`, updateData);
+      alert('Team updated successfully!');
+      loadData();
+    } catch (error) {
+      alert('Error updating team: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const tabs = [
     { id: "auction", label: "Auction Control", icon: "🎯" },
     { id: "players", label: "Players", icon: "👥" },
@@ -317,20 +400,38 @@ const AdminPanel = () => {
               players={players}
               auctionState={auctionState}
               autoAuctionStatus={autoAuctionStatus}
-              setAuctionState={setAuctionState}
-              setAutoAuctionStatus={setAutoAuctionStatus}
+              socket={socket}
+              socketUrl={SOCKET_URL}
             />
           )}
 
           {activeTab === "players" && (
-            <PlayersPanel players={players} setPlayers={setPlayers} />
+            <PlayersPanel 
+              players={players} 
+              setPlayers={setPlayers}
+              loadData={loadData}
+              handleFileUpload={handleFileUpload}
+              deletePlayer={deletePlayer}
+              undoSale={undoSale}
+              updatePlayer={updatePlayer}
+            />
           )}
 
           {activeTab === "teams" && (
-            <TeamsPanel teams={teams} setTeams={setTeams} />
+            <TeamsPanel 
+              teams={teams} 
+              setTeams={setTeams}
+              loadData={loadData}
+              deleteTeam={deleteTeam}
+              updateTeam={updateTeam}
+            />
           )}
 
-          {activeTab === "settings" && <SettingsPanel />}
+          {activeTab === "settings" && (
+            <SettingsPanel 
+              loadData={loadData}
+            />
+          )}
         </main>
       </div>
     </div>

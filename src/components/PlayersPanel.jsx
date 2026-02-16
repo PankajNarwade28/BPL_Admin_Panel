@@ -2,33 +2,30 @@ import React, { useState } from 'react';
 import { Upload, Edit2, Trash2, RotateCcw, Search } from 'lucide-react';
 import EditPlayerModal from './EditPlayerModal';
 
-const PlayersPanel = ({ players, setPlayers }) => {
+const PlayersPanel = ({ 
+  players, 
+  setPlayers, 
+  loadData, 
+  handleFileUpload, 
+  deletePlayer, 
+  undoSale, 
+  updatePlayer 
+}) => {
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
 
-  const handleFileUpload = (event) => {
+  const handleCsvUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      console.log('Uploading CSV:', file.name);
+      handleFileUpload(file);
     }
   };
 
-  const deletePlayer = (playerId) => {
-    if (window.confirm('Are you sure you want to delete this player?')) {
-      console.log('Deleting player:', playerId);
-    }
-  };
-
-  const undoSale = (playerId) => {
-    if (window.confirm('Are you sure you want to undo this sale?')) {
-      console.log('Undoing sale for player:', playerId);
-    }
-  };
-
-  const openEditPlayer = (player) => {
-    setEditingPlayer(player);
+  const handleUpdatePlayer = async (updatedPlayer) => {
+    await updatePlayer(updatedPlayer);
+    setEditingPlayer(null);
   };
 
   const filteredPlayers = players.filter(player => {
@@ -72,7 +69,7 @@ const PlayersPanel = ({ players, setPlayers }) => {
           <input 
             type="file" 
             accept=".csv" 
-            onChange={handleFileUpload}
+            onChange={handleCsvUpload}
             id="csvUpload"
             className="hidden"
           />
@@ -169,7 +166,7 @@ const PlayersPanel = ({ players, setPlayers }) => {
                       {player.status === 'UNSOLD' && (
                         <>
                           <button 
-                            onClick={() => openEditPlayer(player)} 
+                            onClick={() => setEditingPlayer(player)} 
                             className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
                             title="Edit player"
                           >
@@ -214,10 +211,7 @@ const PlayersPanel = ({ players, setPlayers }) => {
         <EditPlayerModal
           player={editingPlayer}
           onClose={() => setEditingPlayer(null)}
-          onUpdate={(updatedPlayer) => {
-            console.log('Updating player:', updatedPlayer);
-            setEditingPlayer(null);
-          }}
+          onUpdate={handleUpdatePlayer}
         />
       )}
     </div>
