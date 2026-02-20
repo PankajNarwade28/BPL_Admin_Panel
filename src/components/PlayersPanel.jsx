@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Upload, Edit2, Trash2, RotateCcw, Search } from 'lucide-react';
 import EditPlayerModal from './EditPlayerModal';
 
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
+const PLACEHOLDER_IMAGE = `${SOCKET_URL}uploads/defaultPlayer.png`;
+
 const PlayersPanel = ({ 
   players, 
   setPlayers, 
@@ -39,7 +42,7 @@ const PlayersPanel = ({
     const badges = {
       'SOLD': <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold uppercase">Sold</span>,
       'UNSOLD': <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold uppercase">Unsold</span>,
-      'AUCTION': <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold uppercase">In Auction</span>
+      'IN_AUCTION': <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold uppercase">In Auction</span>
     };
     return badges[status] || <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold uppercase">{status}</span>;
   };
@@ -52,6 +55,24 @@ const PlayersPanel = ({
       'Wicket-Keeper': 'bg-blue-100 text-blue-700'
     };
     return tags[category] || 'bg-gray-100 text-gray-700';
+  };
+
+  const getPlayerImageUrl = (player) => {
+    // Return placeholder if no photo or if it's the default placeholder path
+    if (!player.photo || player.photo.trim() === '' || player.photo.includes('placeholder')) {
+      return PLACEHOLDER_IMAGE;
+    }
+    
+    // If it's already a full URL, use it
+    if (player.photo.startsWith('http')) {
+      return player.photo;
+    }
+    
+    // Clean up paths and construct URL
+    const cleanPhotoPath = player.photo.replace(/^\/+/, '');
+    const cleanSocketUrl = SOCKET_URL.replace(/\/+$/, '');
+    
+    return `${cleanSocketUrl}/${cleanPhotoPath}`;
   };
 
   return (
@@ -106,7 +127,7 @@ const PlayersPanel = ({
               <option value="ALL">All Status</option>
               <option value="SOLD">Sold</option>
               <option value="UNSOLD">Unsold</option>
-              <option value="AUCTION">In Auction</option>
+              <option value="IN_AUCTION">In Auction</option>
             </select>
 
             <select 
@@ -144,8 +165,16 @@ const PlayersPanel = ({
                 <tr key={player._id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                        {player.name.charAt(0)}
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm flex-shrink-0">
+                        <img 
+                          src={getPlayerImageUrl(player)}
+                          alt={player.name}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = PLACEHOLDER_IMAGE;
+                          }}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <span className="font-semibold text-gray-900">{player.name}</span>
                     </div>

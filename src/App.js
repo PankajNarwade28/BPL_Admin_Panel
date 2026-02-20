@@ -4,11 +4,11 @@ import axios from "axios";
 import "./App.css";
 import AdminPanel from "./components/AdminPanel";
 
-const SOCKET_URL = "http://localhost:5000/";
-const API_URL = "http://localhost:5000/api";
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 // Default placeholder image (SVG data URL)
-const PLACEHOLDER_IMAGE = `${SOCKET_URL}/uploads/wwplaceholder.jpg`;
+const PLACEHOLDER_IMAGE = `${SOCKET_URL}uploads/placeholder.jpg`;
 
 function App() {
   const [socket, setSocket] = useState(null);

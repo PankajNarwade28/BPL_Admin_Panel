@@ -1,29 +1,53 @@
 import React from 'react';
 import { Play, Pause, Square, Zap, Clock, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import PlayerCard from './PlayerCard';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:4000'; // Fallback to localhost if not set
 const AuctionControl = ({ 
   players, 
   auctionState, 
   autoAuctionStatus, 
-  socket, // Accept socket as a prop instead
-  socketUrl // Pass the URL down for images
+  socket, 
+  socketUrl,
+  isTeamSummaryShowing
 }) => { 
-  const PLACEHOLDER_IMAGE = `${socketUrl}/placeholder-player.png`; 
+  // 1. Create a local state to track the pause status for instant UI feedback
+  const [localPaused, setLocalPaused] = useState(auctionState?.isPaused);
+  
+  // Default player image from uploads folder
+  const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
+  const PLACEHOLDER_IMAGE = `${SOCKET_URL}uploads/defaultPlayer.png`; 
+  // 2. Sync local state whenever the server-provided auctionState changes
+  useEffect(() => {
+    setLocalPaused(auctionState?.isPaused);
+  }, [auctionState?.isPaused]);
+
+  const pauseAuction = () => {
+    if (socket) {
+      setLocalPaused(true); // Instant UI update
+      socket.emit('admin:pauseAuction');
+    }
+  };
+
+  const resumeAuction = () => {
+    if (socket) {
+      setLocalPaused(false); // Instant UI update
+      socket.emit('admin:resumeAuction');
+    }
+  };
  const startAuction = (playerId) => {
     if (socket) {
       socket.emit('admin:startAuction', { playerId });
     }
   };
 
-  const pauseAuction = () => {
-    if (socket) socket.emit('admin:pauseAuction');
-  };
+  // const pauseAuction = () => {
+  //   if (socket) socket.emit('admin:pauseAuction');
+  // };
 
-  const resumeAuction = () => {
-    if (socket) socket.emit('admin:resumeAuction');
-  };
+  // const resumeAuction = () => {
+  //   if (socket) socket.emit('admin:resumeAuction');
+  // };
 
   const startAutoAuction = () => {
     if (window.confirm('Start automatic auction for all available players?\n\nPlayers will be auctioned from highest to lowest base price.\nUnsold players will be added back to the queue.')) {
@@ -45,6 +69,25 @@ const AuctionControl = ({
 
   return (
     <div className="space-y-8">
+      {/* Team Summary Banner */}
+      {isTeamSummaryShowing && (
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl p-6 shadow-lg border-2 border-blue-400">
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-white/30 rounded-full animate-ping"></div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-1">📊 Team Summary Displaying</h3>
+              <p className="text-blue-100">
+                Please wait for the team summary to complete before starting the next auction...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Control Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Auto Auction Panel */}
@@ -101,7 +144,8 @@ const AuctionControl = ({
               </div>
               <button
                 onClick={startAutoAuction}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                disabled={isTeamSummaryShowing}
+                className={`w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 ${isTeamSummaryShowing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Zap size={20} />
                 Start Auto Auction
@@ -118,24 +162,25 @@ const AuctionControl = ({
           </div>
           
           {auctionState?.isActive ? (
-            <div className="space-y-4">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
-                auctionState.isPaused 
-                  ? 'bg-yellow-100 text-yellow-700' 
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {auctionState.isPaused ? (
-                  <>
-                    <Pause size={16} />
-                    <span>Paused</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>Active</span>
-                  </>
-                )}
-              </div>
+          <div className="space-y-4">
+            {/* 3. Use localPaused for the Badge and Logic */}
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
+              localPaused 
+                ? 'bg-yellow-100 text-yellow-700' 
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {localPaused ? (
+                <>
+                  <Pause size={16} />
+                  <span>Paused</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Active</span>
+                </>
+              )}
+            </div>
 
               <div className="bg-white rounded-xl p-5 space-y-4">
                 <div className="flex justify-between items-center">
@@ -152,24 +197,25 @@ const AuctionControl = ({
                 </div>
               </div>
 
-              {auctionState.isPaused ? (
-                <button
-                  onClick={resumeAuction}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  <Play size={18} />
-                  Resume Auction
-                </button>
-              ) : (
-                <button
-                  onClick={pauseAuction}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold hover:bg-yellow-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  <Pause size={18} />
-                  Pause Auction
-                </button>
-              )}
-            </div>
+            {/* 4. Use localPaused for the Button Toggle */}
+            {localPaused ? (
+              <button
+                onClick={resumeAuction}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold"
+              >
+                <Play size={18} />
+                Resume Auction
+              </button>
+            ) : (
+              <button
+                onClick={pauseAuction}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold"
+              >
+                <Pause size={18} />
+                Pause Auction
+              </button>
+            )}
+          </div>
           ) : (
             <div className="h-[300px] flex items-center justify-center">
               <div className="text-center">
@@ -198,8 +244,8 @@ const AuctionControl = ({
                 key={player._id}
                 player={player}
                 onStart={() => startAuction(player._id)}
-                disabled={autoAuctionStatus.isActive}
-                socketUrl={SOCKET_URL}
+                disabled={autoAuctionStatus.isActive || isTeamSummaryShowing}
+                socketUrl={socketUrl}
                 placeholderImage={PLACEHOLDER_IMAGE}
               />
             ))}

@@ -2,20 +2,24 @@ import React, { useState , useEffect} from "react";
 import { LogOut, Trash2 } from "lucide-react";
 import io from 'socket.io-client';
 import StatsBar from "./StatsBar";
+import TeamPurseBar from "./TeamPurseBar";
 import AuctionControl from "./AuctionControl";
 import axios from "axios";
 import PlayersPanel from "./PlayersPanel";
 import TeamsPanel from "./TeamsPanel";
 import SettingsPanel from "./SettingsPanel";
+import RegistrationPanel from "./RegistrationPanel";
+import LoadingAnimation from "./LoadingAnimation";
 
-const SOCKET_URL = "http://localhost:5000/";
-const API_URL = "http://localhost:5000/api";
+// const SOCKET_URL = "http://localhost:5000/";
+// const API_URL = "http://localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState("auction");
   const [socket, setSocket] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
   const [stats, setStats] = useState({
     totalPlayers: 0,
     soldPlayers: 0,
@@ -30,6 +34,9 @@ const AdminPanel = () => {
     unsoldCount: 0,
     totalRemaining: 0,
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTeamSummaryShowing, setIsTeamSummaryShowing] = useState(false);
 
   
   useEffect(() => {
@@ -45,7 +52,6 @@ const AdminPanel = () => {
     const savedPassword = localStorage.getItem('admin_password');
     
     if (savedAdminAuth === 'true' && savedPassword) {
-      setPassword(savedPassword);
       // Auto-login with saved credentials
       newSocket.emit('admin:login', { password: savedPassword });
     }
@@ -165,6 +171,11 @@ const AdminPanel = () => {
       });
     });
 
+    // Team summary status
+    newSocket.on('teamSummary:showing', (data) => {
+      setIsTeamSummaryShowing(data.isShowing);
+    });
+
     newSocket.on('autoAuction:status', (data) => {
       setAutoAuctionStatus(data);
     });
@@ -220,6 +231,7 @@ const AdminPanel = () => {
       return;
     }
 
+    setIsLoading(true);
     try {
       const response = await axios.post(`${API_URL}/admin/clear-all-data`);
       if (response.data.success) {
@@ -233,6 +245,8 @@ const AdminPanel = () => {
         "Failed to clear data: " +
           (error.response?.data?.message || error.message),
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -243,12 +257,15 @@ const AdminPanel = () => {
     const formData = new FormData();
     formData.append('csvFile', file);
 
+    setIsUploading(true);
     try {
       const response = await axios.post(`${API_URL}/players/bulk-upload`, formData);
       alert(response.data.message);
       loadData();
     } catch (error) {
       alert('Upload error: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -321,6 +338,7 @@ const AdminPanel = () => {
 
   const tabs = [
     { id: "auction", label: "Auction Control", icon: "🎯" },
+    { id: "registration", label: "Registration", icon: "📝" },
     { id: "players", label: "Players", icon: "👥" },
     { id: "teams", label: "Teams", icon: "🏏" },
     { id: "settings", label: "Settings", icon: "⚙️" },
@@ -328,6 +346,10 @@ const AdminPanel = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 p-4 lg:p-6">
+      {/* Global Loading Animations */}
+      {isUploading && <LoadingAnimation message="Uploading Players..." />}
+      {isLoading && <LoadingAnimation message="Processing..." />}
+      
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
         <header className="bg-white rounded-2xl shadow-xl mb-6 overflow-hidden">
@@ -367,6 +389,7 @@ const AdminPanel = () => {
           </div>
 
           <StatsBar stats={stats} teams={teams} />
+          <TeamPurseBar teams={teams} />
         </header>
 
         {/* Navigation Tabs */}
@@ -402,6 +425,13 @@ const AdminPanel = () => {
               autoAuctionStatus={autoAuctionStatus}
               socket={socket}
               socketUrl={SOCKET_URL}
+              isTeamSummaryShowing={isTeamSummaryShowing}
+            />
+          )}
+
+          {activeTab === "registration" && (
+            <RegistrationPanel 
+              loadData={loadData}
             />
           )}
 
