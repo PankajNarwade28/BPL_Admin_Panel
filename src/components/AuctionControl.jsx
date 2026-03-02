@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, Zap, Clock, Package, RotateCcw } from 'lucide-react';
+import { Play, Pause, Square, Zap, Clock, Package } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import PlayerCard from './PlayerCard';
 
@@ -50,14 +50,6 @@ const AuctionControl = ({
     }
   };
 
-  // const pauseAuction = () => {
-  //   if (socket) socket.emit('admin:pauseAuction');
-  // };
-
-  // const resumeAuction = () => {
-  //   if (socket) socket.emit('admin:resumeAuction');
-  // };
-
   const startAutoAuction = () => {
     if (window.confirm('Start automatic auction for all available players?\n\nPlayers will be auctioned in random order.\nUnsold players will be added back to the queue.')) {
       if (socket) {
@@ -74,7 +66,34 @@ const AuctionControl = ({
     }
   };
 
-  const unsoldPlayers = players.filter(p => p.status === 'UNSOLD');
+  // Filter for unsold AND available players only
+  const unsoldPlayers = players.filter(p => 
+    p.status === 'UNSOLD' && (p.availability === 'AVAILABLE' || !p.availability)
+  );
+
+  // Helper function to get player image URL
+  const getPlayerImageUrl = (player) => {
+    if (!player?.photo || player.photo.trim() === '' || player.photo.includes('placeholder')) {
+      return PLACEHOLDER_IMAGE;
+    }
+    if (player.photo.startsWith('http')) {
+      return player.photo;
+    }
+    const baseUrl = socketUrl.endsWith('/') ? socketUrl : socketUrl + '/';
+    const cleanPath = player.photo.replace(/^\/+/, '');
+    return `${baseUrl}${cleanPath}`;
+  };
+
+  // Helper function to get category badge color
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Batsman': 'bg-red-100 text-red-700 border-red-300',
+      'Bowler': 'bg-green-100 text-green-700 border-green-300',
+      'All-Rounder': 'bg-amber-100 text-amber-700 border-amber-300',
+      'Wicket-Keeper': 'bg-blue-100 text-blue-700 border-blue-300'
+    };
+    return colors[category] || 'bg-gray-100 text-gray-700 border-gray-300';
+  };
 
   return (
     <div className="space-y-8">
@@ -163,81 +182,125 @@ const AuctionControl = ({
           )}
         </div>
 
-        {/* Manual Auction Panel */}
+        {/* Manual Auction Panel / Quick Auction Status */}
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-300">
             <Play className="text-blue-600" size={24} />
-            <h2 className="text-xl font-bold text-gray-900">Manual Auction</h2>
+            <h2 className="text-xl font-bold text-gray-900">Manual Auction Control</h2>
           </div>
           
           {auctionState?.isActive ? (
-          <div className="space-y-4">
-            {/* 3. Use localPaused for the Badge and Logic */}
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
-              localPaused 
-                ? 'bg-yellow-100 text-yellow-700' 
-                : 'bg-green-100 text-green-700'
-            }`}>
-              {localPaused ? (
-                <>
-                  <Pause size={16} />
-                  <span>Paused</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>Active</span>
-                </>
-              )}
-            </div>
+            <div className="space-y-4">
+              {/* Auction Status with Player Info */}
+              <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-xl p-5 shadow-lg border-2 border-blue-400">
+                {/* Status Badge and Timer */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs ${
+                    localPaused 
+                      ? 'bg-yellow-400 text-yellow-900' 
+                      : 'bg-green-400 text-green-900'
+                  }`}>
+                    {localPaused ? (
+                      <>
+                        <Pause size={14} />
+                        <span>PAUSED</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 bg-green-900 rounded-full animate-pulse"></div>
+                        <span>LIVE</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-white">
+                    <Clock size={16} />
+                    <span className="font-bold">{auctionState.timeRemaining || 0}s</span>
+                  </div>
+                </div>
 
-              <div className="bg-white rounded-xl p-5 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Current Player:</span>
-                  <span className="text-base font-semibold text-gray-900">
-                    {auctionState.currentPlayer?.name || 'None'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Current Bid:</span>
-                  <span className="text-xl font-bold text-green-600">
-                    ₹{auctionState.currentHighBid?.amount || 0} L
-                  </span>
-                </div>
+                {auctionState.currentPlayer ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Player Image */}
+                    <div className="col-span-1">
+                      <div className="relative w-full aspect-square rounded-xl overflow-hidden border-3 border-white shadow-lg">
+                        <img 
+                          src={getPlayerImageUrl(auctionState.currentPlayer)}
+                          alt={auctionState.currentPlayer.name}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = PLACEHOLDER_IMAGE;
+                          }}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Player Details & Bid Info */}
+                    <div className="col-span-2 flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-xl font-black text-white mb-2">
+                          {auctionState.currentPlayer.name}
+                        </h3>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${getCategoryColor(auctionState.currentPlayer.category)}`}>
+                            {auctionState.currentPlayer.category}
+                          </span>
+                          <span className="text-xs text-white/80">Base: ₹{auctionState.currentPlayer.basePrice}L</span>
+                        </div>
+                      </div>
+
+                      {/* Current Bid */}
+                      <div className="bg-white/90 rounded-lg p-3">
+                        <div className="text-xs text-gray-600 font-semibold mb-1">Current Bid</div>
+                        <div className="text-3xl font-black text-green-600">
+                          ₹{auctionState.currentHighBid?.amount || auctionState.currentPlayer.basePrice}L
+                        </div>
+                        {auctionState.currentHighBid?.team && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            Leading: <span className="font-bold text-blue-600">{auctionState.currentHighBid.team.teamName}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-white">
+                    Loading player data...
+                  </div>
+                )}
               </div>
 
-            {/* 4. Use localPaused for the Button Toggle */}
-            <div className="space-y-3">
-              {localPaused ? (
+              {/* Control Buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                {localPaused ? (
+                  <button
+                    onClick={resumeAuction}
+                    className="col-span-2 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-green-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    <Play size={18} />
+                    Resume Auction
+                  </button>
+                ) : (
+                  <button
+                    onClick={pauseAuction}
+                    className="col-span-2 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-yellow-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    <Pause size={18} />
+                    Pause Auction
+                  </button>
+                )}
+                
                 <button
-                  onClick={resumeAuction}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                  onClick={resetAuction}
+                  className="col-span-2 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
                 >
-                  <Play size={18} />
-                  Resume Auction
+                  <Square size={18} />
+                  Stop & Reset Auction
                 </button>
-              ) : (
-                <button
-                  onClick={pauseAuction}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold hover:bg-yellow-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  <Pause size={18} />
-                  Pause Auction
-                </button>
-              )}
-              
-              {/* Reset Auction Button */}
-              <button
-                onClick={resetAuction}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 border-2 border-red-700"
-              >
-                <RotateCcw size={18} />
-                Reset Auction
-              </button>
+              </div>
             </div>
-          </div>
           ) : (
-            <div className="h-[300px] flex items-center justify-center">
+            <div className="h-[200px] flex items-center justify-center">
               <div className="text-center">
                 <Play size={48} className="mx-auto text-gray-300 mb-4" />
                 <p className="text-base font-semibold text-gray-600 mb-1">No active auction</p>

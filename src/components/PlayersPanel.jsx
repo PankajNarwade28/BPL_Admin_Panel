@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Edit2, Trash2, RotateCcw, Search } from 'lucide-react';
+import { Upload, Edit2, Trash2, RotateCcw, Search, Ban, CheckCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import EditPlayerModal from './EditPlayerModal';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
@@ -15,12 +15,15 @@ const PlayersPanel = ({
   deletePlayer, 
   undoSale,
   removeFromAuction,
-  updatePlayer 
+  updatePlayer,
+  togglePlayerAvailability
 }) => {
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const handleCsvUpload = (event) => {
     const file = event.target.files[0];
@@ -41,6 +44,17 @@ const PlayersPanel = ({
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPlayers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPlayers = filteredPlayers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, filterCategory]);
+
   const getStatusBadge = (status) => {
     const badges = {
       'SOLD': <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold uppercase">Sold</span>,
@@ -48,6 +62,19 @@ const PlayersPanel = ({
       'IN_AUCTION': <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold uppercase">In Auction</span>
     };
     return badges[status] || <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold uppercase">{status}</span>;
+  };
+
+  const getAvailabilityBadge = (availability) => {
+    if (availability === 'AVAILABLE') {
+      return <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold uppercase">
+        <CheckCircle size={12} />
+        Available
+      </span>;
+    }
+    return <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold uppercase">
+      <Ban size={12} />
+      Unavailable
+    </span>;
   };
 
   const getCategoryTag = (category) => {
@@ -86,6 +113,11 @@ const PlayersPanel = ({
           <span className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm">
             {filteredPlayers.length} players
           </span>
+          {totalPages > 1 && (
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg font-semibold text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+          )}
         </div>
         
         <div>
@@ -157,13 +189,14 @@ const PlayersPanel = ({
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Category</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Base Price</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Availability</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Sold To</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Final Price</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredPlayers.map(player => (
+              {currentPlayers.map(player => (
                 <tr key={player._id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -188,12 +221,28 @@ const PlayersPanel = ({
                   </td>
                   <td className="px-6 py-4 font-semibold text-green-600">₹{player.basePrice} L</td>
                   <td className="px-6 py-4">{getStatusBadge(player.status)}</td>
+                  <td className="px-6 py-4">{getAvailabilityBadge(player.availability || 'AVAILABLE')}</td>
                   <td className="px-6 py-4 text-gray-700">{player.soldTo?.teamName || '-'}</td>
                   <td className="px-6 py-4 font-semibold text-green-600">
                     {player.soldPrice ? `₹${player.soldPrice} L` : '-'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
+                      {/* Availability Toggle - available for UNSOLD and SOLD players */}
+                      {(player.status === 'UNSOLD' || player.status === 'SOLD') && (
+                        <button 
+                          onClick={() => togglePlayerAvailability(player._id, player.availability || 'AVAILABLE')} 
+                          className={`p-2 rounded-lg transition-colors duration-200 ${
+                            (player.availability || 'AVAILABLE') === 'AVAILABLE' 
+                              ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          }`}
+                          title={(player.availability || 'AVAILABLE') === 'AVAILABLE' ? 'Mark as unavailable' : 'Mark as available'}
+                        >
+                          {(player.availability || 'AVAILABLE') === 'AVAILABLE' ? <Ban size={16} /> : <CheckCircle size={16} />}
+                        </button>
+                      )}
+                      
                       {player.status === 'UNSOLD' && (
                         <>
                           <button 
@@ -245,6 +294,116 @@ const PlayersPanel = ({
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 bg-gray-50 border-t-2 border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredPlayers.length)} of {filteredPlayers.length} players
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* First Page Button */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                    currentPage === 1 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500 hover:bg-blue-50'
+                  }`}
+                  title="First page"
+                >
+                  <ChevronsLeft size={16} />
+                  <span className="hidden sm:inline">First</span>
+                </button>
+
+                {/* Previous Page Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                    currentPage === 1 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500 hover:bg-blue-50'
+                  }`}
+                  title="Previous page"
+                >
+                  <ChevronLeft size={16} />
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                    // Show first page, last page, current page, and pages around current
+                    const showPage = page === 1 || 
+                                    page === totalPages || 
+                                    (page >= currentPage - 1 && page <= currentPage + 1);
+                    
+                    // Show ellipsis
+                    const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                    const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+
+                    if (showEllipsisBefore || showEllipsisAfter) {
+                      return (
+                        <span key={page} className="px-3 py-2 text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    if (!showPage) return null;
+
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`min-w-[40px] px-3 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                          currentPage === page
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                            : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500 hover:bg-blue-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Next Page Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                    currentPage === totalPages 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500 hover:bg-blue-50'
+                  }`}
+                  title="Next page"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight size={16} />
+                </button>
+
+                {/* Last Page Button */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                    currentPage === totalPages 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500 hover:bg-blue-50'
+                  }`}
+                  title="Last page"
+                >
+                  <span className="hidden sm:inline">Last</span>
+                  <ChevronsRight size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {editingPlayer && (
