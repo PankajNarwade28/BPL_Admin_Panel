@@ -1,4 +1,4 @@
-import React, { useState , useEffect} from "react";
+import React, { useState , useEffect, useCallback} from "react";
 import { LogOut, Trash2 } from "lucide-react";
 import io from 'socket.io-client';
 import StatsBar from "./StatsBar";
@@ -39,6 +39,25 @@ const AdminPanel = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [isTeamSummaryShowing, setIsTeamSummaryShowing] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      setDataLoading(true);
+      const [playersRes, teamsRes, statsRes] = await Promise.all([
+        axios.get(`${API_URL}/players`),
+        axios.get(`${API_URL}/teams`),
+        axios.get(`${API_URL}/auction/stats`),
+      ]);
+
+      setPlayers(playersRes.data.players || []);
+      setTeams(teamsRes.data.teams || []);
+      setStats(statsRes.data.stats || {});
+    } catch (error) {
+      console.error("Load error:", error);
+    } finally {
+      setDataLoading(false);
+    }
+  }, []);
 
   
   useEffect(() => {
@@ -91,6 +110,7 @@ const AdminPanel = () => {
     });
 
     newSocket.on('auction:state', (data) => {
+      console.log('Auction state updated:', data);
       setAuctionState(data.state);
     });
 
@@ -120,6 +140,40 @@ const AdminPanel = () => {
           amount: data.amount,
           team: { teamName: data.teamName }
         }
+      } : prev);
+    });
+
+    // Listen for auction pause event
+    newSocket.on('auction:paused', () => {
+      console.log('Auction paused');
+      setAuctionState(prev => prev ? {
+        ...prev,
+        isPaused: true
+      } : prev);
+    });
+
+    // Listen for auction resume event
+    newSocket.on('auction:resumed', () => {
+      console.log('Auction resumed');
+      setAuctionState(prev => prev ? {
+        ...prev,
+        isPaused: false
+      } : prev);
+    });
+
+    // Listen for auction reset event
+    newSocket.on('auction:reset', (data) => {
+      console.log('Auction reset:', data.message);
+      setAuctionState(null);
+      // Reload data to refresh player statuses
+      loadData();
+    });
+
+    // Listen for timer updates
+    newSocket.on('timer:update', (data) => {
+      setAuctionState(prev => prev ? {
+        ...prev,
+        timeRemaining: data.value
       } : prev);
     });
 
@@ -193,26 +247,7 @@ const AdminPanel = () => {
       clearInterval(refreshInterval);
       newSocket.close();
     };
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
-    try {
-      setDataLoading(true);
-      const [playersRes, teamsRes, statsRes] = await Promise.all([
-        axios.get(`${API_URL}/players`),
-        axios.get(`${API_URL}/teams`),
-        axios.get(`${API_URL}/auction/stats`),
-      ]);
-
-      setPlayers(playersRes.data.players || []);
-      setTeams(teamsRes.data.teams || []);
-      setStats(statsRes.data.stats || {});
-    } catch (error) {
-      console.error("Load error:", error);
-    } finally {
-      setDataLoading(false);
-    }
-  };
+  }, [isAuthenticated, loadData]);
  
   const handleLogout = () => {
     localStorage.removeItem("admin_authenticated");
@@ -317,6 +352,19 @@ const AdminPanel = () => {
       loadData();
     } catch (error) {
       alert('Error updating player: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const togglePlayerAvailability = async (playerId, currentAvailability) => {
+    try {
+      const newAvailability = currentAvailability === 'AVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE';
+      const response = await axios.patch(`${API_URL}/players/${playerId}/availability`, {
+        availability: newAvailability
+      });
+      alert(response.data.message);
+      loadData();
+    } catch (error) {
+      alert('Error toggling availability: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -460,6 +508,7 @@ const AdminPanel = () => {
               undoSale={undoSale}
               removeFromAuction={removeFromAuction}
               updatePlayer={updatePlayer}
+              togglePlayerAvailability={togglePlayerAvailability}
             />
           )}
 
