@@ -3,7 +3,9 @@ import { Upload, Edit2, Trash2, RotateCcw, Search } from 'lucide-react';
 import EditPlayerModal from './EditPlayerModal';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
-const PLACEHOLDER_IMAGE = `${SOCKET_URL}uploads/defaultPlayer.png`;
+// Ensure URL ends with slash
+const BASE_URL = SOCKET_URL.endsWith('/') ? SOCKET_URL : SOCKET_URL + '/';
+const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dz8q0fb8m/image/upload/v1772197979/defaultPlayer_kad3xb.png';
 
 const PlayersPanel = ({ 
   players, 
@@ -11,7 +13,8 @@ const PlayersPanel = ({
   loadData, 
   handleFileUpload, 
   deletePlayer, 
-  undoSale, 
+  undoSale,
+  removeFromAuction,
   updatePlayer 
 }) => {
   const [editingPlayer, setEditingPlayer] = useState(null);
@@ -63,16 +66,15 @@ const PlayersPanel = ({
       return PLACEHOLDER_IMAGE;
     }
     
-    // If it's already a full URL, use it
+    // If it's already a full URL (Cloudinary or other), use it as-is
     if (player.photo.startsWith('http')) {
       return player.photo;
     }
     
-    // Clean up paths and construct URL
+    // Clean up paths and construct URL for legacy images
     const cleanPhotoPath = player.photo.replace(/^\/+/, '');
-    const cleanSocketUrl = SOCKET_URL.replace(/\/+$/, '');
     
-    return `${cleanSocketUrl}/${cleanPhotoPath}`;
+    return `${BASE_URL}${cleanPhotoPath}`;
   };
 
   return (
@@ -215,6 +217,15 @@ const PlayersPanel = ({
                           onClick={() => undoSale(player._id)} 
                           className="p-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors duration-200"
                           title="Undo sale"
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                      )}
+                      {player.status === 'IN_AUCTION' && (
+                        <button 
+                          onClick={() => removeFromAuction(player._id)} 
+                          className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200"
+                          title="Remove from auction"
                         >
                           <RotateCcw size={16} />
                         </button>

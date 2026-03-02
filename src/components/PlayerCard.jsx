@@ -24,25 +24,23 @@ const PlayerCard = ({ player, onStart, disabled, socketUrl, placeholderImage }) 
     return icons[category] || '🎯';
   };
 
-  // Fix image URL construction - remove leading slashes and ensure proper URL
+  // Get image URL
   const getImageUrl = () => {
     // Return placeholder if no photo or if it's the default placeholder path
     if (!player.photo || player.photo.trim() === '' || player.photo.includes('placeholder')) {
       return placeholderImage;
     }
     
-    // If it's already a full URL, use it directly
+    // If it's already a full URL (Cloudinary or other), use it as-is
     if (player.photo.startsWith('http')) {
       return player.photo;
     }
     
-    // Remove leading slashes from photo path
+    // For legacy local images, ensure proper URL construction
+    const normalizedBase = socketUrl.endsWith('/') ? socketUrl : socketUrl + '/';
     const cleanPhotoPath = player.photo.replace(/^\/+/, '');
     
-    // Ensure socketUrl ends without slash and photo path starts without slash
-    const cleanSocketUrl = socketUrl.replace(/\/+$/, '');
-    
-    return `${cleanSocketUrl}/${cleanPhotoPath}`;
+    return `${normalizedBase}${cleanPhotoPath}`;
   };
 
   const imageUrl = getImageUrl();

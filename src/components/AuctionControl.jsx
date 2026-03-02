@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, Zap, Clock, Package } from 'lucide-react';
+import { Play, Pause, Square, Zap, Clock, Package, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import PlayerCard from './PlayerCard';
 
@@ -14,9 +14,9 @@ const AuctionControl = ({
   // 1. Create a local state to track the pause status for instant UI feedback
   const [localPaused, setLocalPaused] = useState(auctionState?.isPaused);
   
-  // Default player image from uploads folder
-  const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
-  const PLACEHOLDER_IMAGE = `${SOCKET_URL}uploads/defaultPlayer.png`; 
+  // Default player image from Cloudinary
+  const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dz8q0fb8m/image/upload/v1772197979/defaultPlayer_kad3xb.png'; 
+  
   // 2. Sync local state whenever the server-provided auctionState changes
   useEffect(() => {
     setLocalPaused(auctionState?.isPaused);
@@ -35,6 +35,15 @@ const AuctionControl = ({
       socket.emit('admin:resumeAuction');
     }
   };
+
+  const resetAuction = () => {
+    if (window.confirm('Reset current auction?\n\nThis will stop the auction and return the player to UNSOLD status.\nAll bids for this player will be cleared.')) {
+      if (socket) {
+        socket.emit('admin:resetAuction');
+      }
+    }
+  };
+
  const startAuction = (playerId) => {
     if (socket) {
       socket.emit('admin:startAuction', { playerId });
@@ -50,7 +59,7 @@ const AuctionControl = ({
   // };
 
   const startAutoAuction = () => {
-    if (window.confirm('Start automatic auction for all available players?\n\nPlayers will be auctioned from highest to lowest base price.\nUnsold players will be added back to the queue.')) {
+    if (window.confirm('Start automatic auction for all available players?\n\nPlayers will be auctioned in random order.\nUnsold players will be added back to the queue.')) {
       if (socket) {
         socket.emit('admin:startAutoAuction');
       }
@@ -139,7 +148,7 @@ const AuctionControl = ({
             <div className="space-y-4">
               <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500">
                 <p className="text-gray-700 text-sm leading-relaxed">
-                  Start automatic auction for all players. Players will be auctioned from highest to lowest base price. Unsold players will be added back to the queue.
+                  Start automatic auction for all players. Players will be auctioned in random order. Unsold players will be added back to the queue.
                 </p>
               </div>
               <button
@@ -198,23 +207,34 @@ const AuctionControl = ({
               </div>
 
             {/* 4. Use localPaused for the Button Toggle */}
-            {localPaused ? (
+            <div className="space-y-3">
+              {localPaused ? (
+                <button
+                  onClick={resumeAuction}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  <Play size={18} />
+                  Resume Auction
+                </button>
+              ) : (
+                <button
+                  onClick={pauseAuction}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold hover:bg-yellow-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  <Pause size={18} />
+                  Pause Auction
+                </button>
+              )}
+              
+              {/* Reset Auction Button */}
               <button
-                onClick={resumeAuction}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold"
+                onClick={resetAuction}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 border-2 border-red-700"
               >
-                <Play size={18} />
-                Resume Auction
+                <RotateCcw size={18} />
+                Reset Auction
               </button>
-            ) : (
-              <button
-                onClick={pauseAuction}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold"
-              >
-                <Pause size={18} />
-                Pause Auction
-              </button>
-            )}
+            </div>
           </div>
           ) : (
             <div className="h-[300px] flex items-center justify-center">

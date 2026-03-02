@@ -310,14 +310,14 @@ const RegistrationPanel = ({ loadData }) => {
                       name="basePrice"
                       value={formData.basePrice}
                       onChange={handleInputChange}
-                      min="20"
+                      min="0"
                       max="150"
                       required
                       className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all duration-200 text-gray-900 font-bold text-lg"
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Minimum: ₹20L • Maximum: ₹150L
+                    Minimum: ₹5L • Maximum: ₹150L
                   </p>
                 </div>
               </div>

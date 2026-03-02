@@ -68,7 +68,13 @@ const TeamPurseBar = ({ teams }) => {
                   {/* Team Logo */}
                   {team.logo && (
                     <img 
-                      src={team.logo.startsWith('http') ? team.logo : `${process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000/'}${team.logo.replace(/^\/+/, '').startsWith('uploads') ? team.logo.replace(/^\/+/, '') : 'uploads/' + team.logo.replace(/^\/+/, '')}`}
+                      src={(() => {
+                        if (team.logo.startsWith('http')) return team.logo;
+                        const baseUrl = (process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000/');
+                        const normalizedBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+                        const cleanPath = team.logo.replace(/^\/+/, '');
+                        return `${normalizedBase}${cleanPath}`;
+                      })()}
                       alt={team.teamName}
                       className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0"
                       onError={(e) => {

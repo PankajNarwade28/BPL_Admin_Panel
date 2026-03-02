@@ -10,6 +10,7 @@ import TeamsPanel from "./TeamsPanel";
 import SettingsPanel from "./SettingsPanel";
 import RegistrationPanel from "./RegistrationPanel";
 import LoadingAnimation from "./LoadingAnimation";
+import { StatsBarSkeleton, TeamPurseBarSkeleton } from "./SkeletonLoader";
 
 // const SOCKET_URL = "http://localhost:5000/";
 // const API_URL = "http://localhost:5000/api";
@@ -36,6 +37,7 @@ const AdminPanel = () => {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [isTeamSummaryShowing, setIsTeamSummaryShowing] = useState(false);
 
   
@@ -195,6 +197,7 @@ const AdminPanel = () => {
 
   const loadData = async () => {
     try {
+      setDataLoading(true);
       const [playersRes, teamsRes, statsRes] = await Promise.all([
         axios.get(`${API_URL}/players`),
         axios.get(`${API_URL}/teams`),
@@ -206,6 +209,8 @@ const AdminPanel = () => {
       setStats(statsRes.data.stats || {});
     } catch (error) {
       console.error("Load error:", error);
+    } finally {
+      setDataLoading(false);
     }
   };
  
@@ -285,6 +290,16 @@ const AdminPanel = () => {
     if (window.confirm('Are you sure you want to undo this sale?')) {
       if (socket) {
         socket.emit('admin:undoSale', { playerId });
+        // Reload data after a brief delay to allow server to process
+        setTimeout(() => loadData(), 500);
+      }
+    }
+  };
+
+  const removeFromAuction = (playerId) => {
+    if (window.confirm('Remove this player from auction back to UNSOLD status?')) {
+      if (socket) {
+        socket.emit('admin:removeFromAuction', { playerId });
         // Reload data after a brief delay to allow server to process
         setTimeout(() => loadData(), 500);
       }
@@ -388,8 +403,8 @@ const AdminPanel = () => {
             </div>
           </div>
 
-          <StatsBar stats={stats} teams={teams} />
-          <TeamPurseBar teams={teams} />
+          {dataLoading ? <StatsBarSkeleton /> : <StatsBar stats={stats} teams={teams} />}
+          {dataLoading ? <TeamPurseBarSkeleton /> : <TeamPurseBar teams={teams} />}
         </header>
 
         {/* Navigation Tabs */}
@@ -443,6 +458,7 @@ const AdminPanel = () => {
               handleFileUpload={handleFileUpload}
               deletePlayer={deletePlayer}
               undoSale={undoSale}
+              removeFromAuction={removeFromAuction}
               updatePlayer={updatePlayer}
             />
           )}

@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import AdminPanel from "./components/AdminPanel";
+import LoadingAnimation from "./components/LoadingAnimation";
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-// Default placeholder image (SVG data URL)
-const PLACEHOLDER_IMAGE = `${SOCKET_URL}uploads/placeholder.jpg`;
+// Default placeholder image (Cloudinary)
+const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dz8q0fb8m/image/upload/v1772197979/defaultPlayer_kad3xb.png';
 
 function App() {
   const [socket, setSocket] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Auction state
   const [players, setPlayers] = useState([]);
@@ -63,6 +67,8 @@ function App() {
 
     if (savedAdminAuth === "true" && savedPassword) {
       setPassword(savedPassword);
+      setIsLoading(true);
+      toast.info("Authenticating...", { autoClose: false, toastId: "auth-loading" });
       // Auto-login with saved credentials
       newSocket.emit("admin:login", { password: savedPassword });
     }
@@ -71,6 +77,8 @@ function App() {
     newSocket.on("connect", () => {
       console.log("Admin panel connected");
       if (savedAdminAuth === "true" && savedPassword) {
+        setIsLoading(true);
+        toast.info("Authenticating...", { autoClose: false, toastId: "auth-loading" });
         newSocket.emit("admin:login", { password: savedPassword });
       }
     });
@@ -82,18 +90,25 @@ function App() {
     newSocket.on("reconnect", () => {
       console.log("Admin panel reconnected");
       if (savedAdminAuth === "true" && savedPassword) {
+        setIsLoading(true);
+        toast.info("Reconnecting...", { autoClose: false, toastId: "auth-loading" });
         newSocket.emit("admin:login", { password: savedPassword });
       }
       loadData(); // Reload data on reconnection
     });
 
     newSocket.on("auth:success", () => {
+      toast.dismiss("auth-loading");
+      setIsLoading(false);
+      toast.success("Login successful! Welcome to Admin Panel", { autoClose: 3000 });
       setIsAuthenticated(true);
       loadData();
     });
 
     newSocket.on("auth:error", (data) => {
-      alert(data.message);
+      toast.dismiss("auth-loading");
+      setIsLoading(false);
+      toast.error(data.message || "Invalid password. Please try again.", { autoClose: 5000 });
       // Clear invalid session
       localStorage.removeItem("admin_authenticated");
       localStorage.removeItem("admin_password");
@@ -192,6 +207,12 @@ function App() {
       setAutoAuctionStatus(data);
     });
 
+    newSocket.on("auction:reset", (data) => {
+      // Reload all data to refresh player status
+      loadData();
+      console.log('Auction reset:', data.message);
+    });
+
     // Set up periodic data refresh every 10 seconds
     const refreshInterval = setInterval(() => {
       if (isAuthenticated) {
@@ -224,6 +245,8 @@ function App() {
   const handleLogin = (e) => {
     e.preventDefault();
     if (socket) {
+      setIsLoading(true);
+      toast.info("Authenticating...", { autoClose: false, toastId: "auth-loading" });
       socket.emit("admin:login", { password });
       // Save credentials on successful manual login
       socket.once("auth:success", () => {
@@ -389,6 +412,19 @@ function App() {
   if (!isAuthenticated) {
     return (
       <div className="app">
+        {isLoading && <LoadingAnimation message="Authenticating..." />}
+        <ToastContainer 
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <div className="admin-login">
           <div className="login-card">
             <h1>🔐 Admin Panel</h1>
@@ -399,8 +435,11 @@ function App() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Admin Password"
                 required
+                disabled={isLoading}
               />
-              <button type="submit">Login</button>
+              <button type="submit" disabled={isLoading}>
+                {isLoading ? "Authenticating..." : "Login"}
+              </button>
             </form>
           </div>
         </div>
@@ -410,6 +449,18 @@ function App() {
 
   return (
     <>
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <AdminPanel />
     </>
   );

@@ -3,7 +3,9 @@ import { Download, Edit2, Trash2, Users, Award, DollarSign, TrendingUp, CheckCir
 import EditTeamModal from './EditTeamModal';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
-const DEFAULT_TEAM_LOGO = `${SOCKET_URL}uploads/defaultTeam.png`;
+// Ensure URL ends with slash
+const BASE_URL = SOCKET_URL.endsWith('/') ? SOCKET_URL : SOCKET_URL + '/';
+const DEFAULT_TEAM_LOGO = 'https://res.cloudinary.com/dz8q0fb8m/image/upload/v1772197980/defaultTeam_x7thxe.png';
 
 const TeamsPanel = ({ teams, setTeams, loadData, deleteTeam, updateTeam }) => {
   const [editingTeam, setEditingTeam] = useState(null);
@@ -17,6 +19,22 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   const openEditTeam = (team) => {
     setEditingTeam(team);
+  };
+
+  // Helper function to get team logo URL
+  const getTeamLogoUrl = (team) => {
+    if (!team.logo || team.logo.trim() === '') {
+      return DEFAULT_TEAM_LOGO;
+    }
+    
+    // If it's already a full URL (Cloudinary or other), use it as-is
+    if (team.logo.startsWith('http')) {
+      return team.logo;
+    }
+    
+    // Otherwise, construct URL from BASE_URL (legacy local uploads)
+    const cleanPath = team.logo.replace(/^\//, '');
+    return `${BASE_URL}${cleanPath}`;
   };
 
   const getProgressColor = (filled, total) => {
@@ -100,7 +118,7 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
                 <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-gray-200">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
                     <img 
-                      src={(team.logo && team.logo.trim() !== '') ? `${SOCKET_URL}${team.logo.replace(/^\//,  '')}` : DEFAULT_TEAM_LOGO}
+                      src={getTeamLogoUrl(team)}
                       alt={team.teamName}
                       className="w-full h-full object-cover"
                       onError={(e) => {
