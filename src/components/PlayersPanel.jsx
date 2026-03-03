@@ -204,6 +204,7 @@ const PlayersPanel = ({
                         <img 
                           src={getPlayerImageUrl(player)}
                           alt={player.name}
+                          loading="lazy"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = PLACEHOLDER_IMAGE;
