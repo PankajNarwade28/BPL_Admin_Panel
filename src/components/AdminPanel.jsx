@@ -120,16 +120,54 @@ const AdminPanel = () => {
 
     // Listen for player sold to update player list and stats
     newSocket.on('player:sold', (data) => {
-      // Reload data to get updated player statuses and team info
+      console.log('Player sold:', data);
+      // Immediately update player status in local state
+      setPlayers(prev => prev.map(p => 
+        p._id === data.player._id ? { 
+          ...p, 
+          status: data.player.status || (data.team ? 'SOLD' : 'UNSOLD'),
+          soldTo: data.team ? { teamName: data.team.teamName } : null,
+          soldPrice: data.amount || null
+        } : p
+      ));
+      // Reload full data to get updated team info and stats
       loadData();
     });
 
-    // Listen for auction started to update player status
+    // Listen for auction ended to immediately clear auction state
+    newSocket.on('auction:ended', (data) => {
+      console.log('Auction ended:', data);
+      // Immediately clear auction state for instant UI update
+      setAuctionState(null);
+      // Update player status immediately
+      setPlayers(prev => prev.map(p => 
+        p._id === data.player._id ? { 
+          ...p, 
+          status: data.status,
+          soldTo: data.team ? { teamName: data.team.teamName } : null,
+          soldPrice: data.amount || null
+        } : p
+      ));
+    });
+
+    // Listen for auction started to update player status and auction state
     newSocket.on('auction:started', (data) => {
-      // Update the specific player's status
+      console.log('Auction started:', data);
+      // Update the specific player's status immediately
       setPlayers(prev => prev.map(p => 
         p._id === data.player._id ? { ...p, status: 'IN_AUCTION' } : p
       ));
+      // Immediately set auction state for instant UI update
+      setAuctionState({
+        isActive: true,
+        isPaused: false,
+        currentPlayer: data.player,
+        currentHighBid: {
+          amount: data.basePrice,
+          team: null
+        },
+        timeRemaining: data.timerValue || 20
+      });
     });
 
     // Listen for bid updates (optional - for real-time bid display)
