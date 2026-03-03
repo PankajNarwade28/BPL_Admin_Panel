@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, Zap, Clock, Package } from 'lucide-react';
+import { Play, Pause, Square, Zap, Clock, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import PlayerCard from './PlayerCard';
 
@@ -13,6 +13,10 @@ const AuctionControl = ({
 }) => { 
   // 1. Create a local state to track the pause status for instant UI feedback
   const [localPaused, setLocalPaused] = useState(auctionState?.isPaused);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20; // Show 20 players per page
   
   // Default player image from Cloudinary
   const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dz8q0fb8m/image/upload/v1772197979/defaultPlayer_kad3xb.png'; 
@@ -70,6 +74,19 @@ const AuctionControl = ({
   const unsoldPlayers = players.filter(p => 
     p.status === 'UNSOLD' && (p.availability === 'AVAILABLE' || !p.availability)
   );
+
+  // Pagination calculations
+  const totalPages = Math.ceil(unsoldPlayers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPlayers = unsoldPlayers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when players list changes significantly
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [unsoldPlayers.length, currentPage, totalPages]);
 
   // Helper function to get player image URL
   const getPlayerImageUrl = (player) => {
@@ -315,24 +332,91 @@ const AuctionControl = ({
       <div className="mt-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b-2 border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900">Start Manual Auction</h2>
-          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg">
-            {unsoldPlayers.length} Players Available
+          <div className="flex items-center gap-3">
+            {totalPages > 1 && (
+              <span className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            )}
+            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg">
+              {unsoldPlayers.length} Players Available
+            </div>
           </div>
         </div>
         
         {unsoldPlayers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
-            {unsoldPlayers.map(player => (
-              <PlayerCard
-                key={player._id}
-                player={player}
-                onStart={() => startAuction(player._id)}
-                disabled={autoAuctionStatus.isActive || isTeamSummaryShowing}
-                socketUrl={socketUrl}
-                placeholderImage={PLACEHOLDER_IMAGE}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+              {currentPlayers.map(player => (
+                <PlayerCard
+                  key={player._id}
+                  player={player}
+                  onStart={() => startAuction(player._id)}
+                  disabled={autoAuctionStatus.isActive || isTeamSummaryShowing}
+                  socketUrl={socketUrl}
+                  placeholderImage={PLACEHOLDER_IMAGE}
+                />
+              ))}
+            </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t-2 border-gray-200">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1}-{Math.min(endIndex, unsoldPlayers.length)} of {unsoldPlayers.length} players
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    <ChevronLeft size={18} />
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {[...Array(Math.min(5, totalPages))].map((_, idx) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = idx + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = idx + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + idx;
+                      } else {
+                        pageNum = currentPage - 2 + idx;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-10 h-10 rounded-lg font-semibold transition-all duration-200 ${
+                            currentPage === pageNum
+                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Next
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="py-16 text-center">
             <Package size={64} className="mx-auto text-gray-300 mb-4" />
