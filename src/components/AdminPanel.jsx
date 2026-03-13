@@ -34,6 +34,13 @@ const AdminPanel = () => {
     queueLength: 0,
     unsoldCount: 0,
     totalRemaining: 0,
+    currentSet: null,
+    setBreakdown: null,
+    setsWithPlayers: [],
+    inUnsoldRound: false,
+    remainingSets: 0,
+    setIntroActive: false,
+    setIntroData: null,
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -221,7 +228,37 @@ const AdminPanel = () => {
         ...prev,
         isActive: true,
         queueLength: data.queueLength,
-        totalRemaining: data.totalPlayers
+        totalRemaining: data.totalPlayers,
+        setBreakdown: data.setBreakdown || null,
+        setsWithPlayers: data.setsWithPlayers || [],
+      }));
+    });
+
+    newSocket.on('autoAuction:setIntroStarted', (data) => {
+      setAutoAuctionStatus(prev => ({
+        ...prev,
+        currentSet: data.set,
+        setIntroActive: true,
+        setIntroData: data,
+        remainingSets: data.remainingSets,
+      }));
+    });
+
+    newSocket.on('autoAuction:setStarted', (data) => {
+      setAutoAuctionStatus(prev => ({
+        ...prev,
+        setIntroActive: false,
+        currentSet: data.set,
+        queueLength: data.remaining,
+        totalRemaining: data.remaining,
+      }));
+    });
+
+    newSocket.on('autoAuction:setComplete', (data) => {
+      setAutoAuctionStatus(prev => ({
+        ...prev,
+        setIntroActive: false,
+        inUnsoldRound: false,
       }));
     });
 
@@ -230,7 +267,9 @@ const AdminPanel = () => {
         ...prev,
         queueLength: data.queueLength,
         unsoldCount: data.unsoldCount,
-        totalRemaining: data.totalRemaining
+        totalRemaining: data.totalRemaining,
+        currentSet: data.currentSet || prev.currentSet,
+        inUnsoldRound: data.inUnsoldRound || false,
       }));
     });
 

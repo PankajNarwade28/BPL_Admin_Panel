@@ -144,31 +144,84 @@ const AuctionControl = ({
           
           {autoAuctionStatus.isActive ? (
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Auto Auction Running</span>
+              {/* Status + current set badge */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg font-semibold text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Running</span>
+                </div>
+                {autoAuctionStatus.currentSet && (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm border-2 ${
+                    autoAuctionStatus.currentSet === 'A' ? 'bg-amber-100 text-amber-800 border-amber-400' :
+                    autoAuctionStatus.currentSet === 'B' ? 'bg-blue-100 text-blue-800 border-blue-400' :
+                    autoAuctionStatus.currentSet === 'C' ? 'bg-emerald-100 text-emerald-800 border-emerald-400' :
+                    'bg-slate-100 text-slate-800 border-slate-400'
+                  }`}>
+                    🎯 Set {autoAuctionStatus.currentSet}
+                    {autoAuctionStatus.inUnsoldRound && (
+                      <span className="text-xs font-normal opacity-70 ml-1">(Retry)</span>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              <div className="space-y-3">
-                <div className="bg-white rounded-xl p-4 flex items-center gap-4 border-l-4 border-blue-600">
-                  <Package size={20} className="text-blue-600" />
+
+              {/* Set intro active banner */}
+              {autoAuctionStatus.setIntroActive && autoAuctionStatus.setIntroData && (
+                <div className={`rounded-xl p-3 border-2 ${
+                  autoAuctionStatus.setIntroData.set === 'A' ? 'bg-amber-50 border-amber-300' :
+                  autoAuctionStatus.setIntroData.set === 'B' ? 'bg-blue-50 border-blue-300' :
+                  autoAuctionStatus.setIntroData.set === 'C' ? 'bg-emerald-50 border-emerald-300' :
+                  'bg-slate-50 border-slate-300'
+                }`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wide text-gray-700">Intro Showing (30s)</span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {autoAuctionStatus.setIntroData.label} &middot; Base ₹{autoAuctionStatus.setIntroData.basePrice}L &middot; {autoAuctionStatus.setIntroData.totalPlayers} players
+                  </p>
+                </div>
+              )}
+
+              {/* Set breakdown grid A-D */}
+              {autoAuctionStatus.setBreakdown && (
+                <div className="grid grid-cols-4 gap-1.5">
+                  {['A','B','C','D'].map(set => {
+                    const count = autoAuctionStatus.setBreakdown[set] || 0;
+                    const isCurrent = autoAuctionStatus.currentSet === set;
+                    const palettes = {
+                      A: isCurrent ? 'bg-amber-100 border-amber-400 text-amber-900' : count > 0 ? 'bg-white border-gray-200 text-gray-700' : 'bg-gray-50 border-gray-100 text-gray-400',
+                      B: isCurrent ? 'bg-blue-100 border-blue-400 text-blue-900'   : count > 0 ? 'bg-white border-gray-200 text-gray-700' : 'bg-gray-50 border-gray-100 text-gray-400',
+                      C: isCurrent ? 'bg-emerald-100 border-emerald-400 text-emerald-900' : count > 0 ? 'bg-white border-gray-200 text-gray-700' : 'bg-gray-50 border-gray-100 text-gray-400',
+                      D: isCurrent ? 'bg-slate-200 border-slate-400 text-slate-900' : count > 0 ? 'bg-white border-gray-200 text-gray-700' : 'bg-gray-50 border-gray-100 text-gray-400',
+                    };
+                    const basePrices = { A: 150, B: 100, C: 50, D: 20 };
+                    return (
+                      <div key={set} className={`rounded-xl border-2 p-2 text-center transition-all ${palettes[set]}`}>
+                        <div className="text-lg font-black leading-none">{set}</div>
+                        <div className="text-sm font-bold mt-0.5">{count}</div>
+                        <div className="text-[10px] opacity-70">₹{basePrices[set]}L</div>
+                        {isCurrent && <div className="w-full h-1 mt-1 rounded-full bg-current opacity-50" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white rounded-xl p-3 flex items-center gap-3 border-l-4 border-blue-600">
+                  <Package size={18} className="text-blue-600 flex-shrink-0" />
                   <div>
-                    <div className="text-2xl font-bold text-gray-900">{autoAuctionStatus.queueLength}</div>
-                    <div className="text-sm text-gray-600">In Queue</div>
+                    <div className="text-xl font-bold text-gray-900">{autoAuctionStatus.queueLength}</div>
+                    <div className="text-xs text-gray-600">In Queue</div>
                   </div>
                 </div>
-                
-                <div className="bg-white rounded-xl p-4 flex items-center gap-4 border-l-4 border-blue-600">
-                  <Clock size={20} className="text-blue-600" />
+                <div className="bg-white rounded-xl p-3 flex items-center gap-3 border-l-4 border-orange-500">
+                  <Clock size={18} className="text-orange-500 flex-shrink-0" />
                   <div>
-                    <div className="text-2xl font-bold text-gray-900">{autoAuctionStatus.unsoldCount}</div>
-                    <div className="text-sm text-gray-600">Will Retry</div>
+                    <div className="text-xl font-bold text-gray-900">{autoAuctionStatus.unsoldCount}</div>
+                    <div className="text-xs text-gray-600">Will Retry</div>
                   </div>
-                </div>
-                
-                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border-l-4 border-purple-600">
-                  <div className="text-2xl font-bold text-gray-900">{autoAuctionStatus.totalRemaining}</div>
-                  <div className="text-sm text-gray-600">Total Remaining</div>
                 </div>
               </div>
 
@@ -182,10 +235,16 @@ const AuctionControl = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500">
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  Start automatic auction for all players. Players will be auctioned in random order. Unsold players will be added back to the queue.
-                </p>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500 space-y-3">
+                <p className="text-gray-700 text-sm leading-relaxed">Players auction in set order from highest to lowest base price:</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[{s:'A',p:150,c:'bg-amber-50 border-amber-300 text-amber-800'},{s:'B',p:100,c:'bg-blue-50 border-blue-300 text-blue-800'},{s:'C',p:50,c:'bg-emerald-50 border-emerald-300 text-emerald-800'},{s:'D',p:20,c:'bg-slate-50 border-slate-300 text-slate-700'}].map(({s,p,c}) => (
+                    <div key={s} className={`rounded-lg border-2 p-2 text-center ${c}`}>
+                      <div className="font-black text-base leading-none">Set {s}</div>
+                      <div className="text-[11px] font-bold opacity-80 mt-1">₹{p}L</div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <button
                 onClick={startAutoAuction}
