@@ -10,9 +10,6 @@ import LoadingAnimation from "./components/LoadingAnimation";
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000/";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-// Default placeholder image (Cloudinary)
-const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dz8q0fb8m/image/upload/v1772197979/defaultPlayer_kad3xb.png';
-
 function App() {
   const [socket, setSocket] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,12 +17,12 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Auction state
-  const [players, setPlayers] = useState([]);
-  const [teams, setTeams] = useState([]);
-  const [auctionState, setAuctionState] = useState(null);
+  const [, setPlayers] = useState([]);
+  const [, setTeams] = useState([]);
+  const [, setAuctionState] = useState(null);
 
   // Auto auction state
-  const [autoAuctionStatus, setAutoAuctionStatus] = useState({
+  const [, setAutoAuctionStatus] = useState({
     isActive: false,
     queueLength: 0,
     unsoldCount: 0,
@@ -33,25 +30,11 @@ function App() {
   });
 
   // Stats
-  const [stats, setStats] = useState({
+  const [, setStats] = useState({
     totalPlayers: 0,
     soldPlayers: 0,
     unsoldPlayers: 0,
   });
-
-  // Create captain form
-  const [captainForm, setCaptainForm] = useState({
-    teamName: "",
-    captainName: "",
-    teamId: "",
-    pin: "",
-  });
-
-  // Edit modals
-  const [editingPlayer, setEditingPlayer] = useState(null);
-  const [editingTeam, setEditingTeam] = useState(null);
-  const [playerForm, setPlayerForm] = useState({});
-  const [teamForm, setTeamForm] = useState({});
 
   useEffect(() => {
     const newSocket = io(SOCKET_URL, {
@@ -254,12 +237,6 @@ function App() {
         localStorage.setItem("admin_password", password);
       });
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("admin_authenticated");
-    localStorage.removeItem("admin_password");
-    window.location.reload();
   };
 
   // const handleClearAllData = async () => {

@@ -23,13 +23,6 @@ const TeamPurseBar = ({ teams }) => {
     return 'text-green-700';
   };
 
-  const getIconBgClass = (remainingPoints) => {
-    if (remainingPoints <= 10) return 'bg-red-100';
-    if (remainingPoints <= 30) return 'bg-orange-100';
-    if (remainingPoints <= 60) return 'bg-yellow-100';
-    return 'bg-green-100';
-  };
-
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 px-6 lg:px-8 py-4 border-t border-gray-200">
       <div className="flex items-center gap-3 mb-3">
