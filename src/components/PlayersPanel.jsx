@@ -228,12 +228,11 @@ const PlayersPanel = ({
                     {player.soldPrice ? `₹${player.soldPrice} L` : '-'}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      {/* Availability Toggle - available for UNSOLD and SOLD players */}
-                      {(player.status === 'UNSOLD' || player.status === 'SOLD') && (
+                    <div className="flex flex-wrap gap-2">
+                      {player.status === 'UNSOLD' && (
                         <button 
                           onClick={() => togglePlayerAvailability(player._id, player.availability || 'AVAILABLE')} 
-                          className={`p-2 rounded-lg transition-colors duration-200 ${
+                          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ${
                             (player.availability || 'AVAILABLE') === 'AVAILABLE' 
                               ? 'bg-red-100 text-red-700 hover:bg-red-200' 
                               : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'

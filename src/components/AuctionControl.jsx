@@ -54,10 +54,13 @@ const AuctionControl = ({
     }
   };
 
-  const startAutoAuction = () => {
-    if (window.confirm('Start automatic auction for all available players?\n\nPlayers will be auctioned in random order.\nUnsold players will be added back to the queue.')) {
+  const startAutoAuction = (mode) => {
+    const label = mode === 'random'
+      ? 'Start RANDOM auto auction?\n\nAll available players will be auctioned one by one in a completely random order regardless of their base price.'
+      : 'Start SET-WISE auto auction?\n\nPlayers will be auctioned in set order: Set A (₹150L+) → Set B (₹100L+) → Set C (₹50L+) → Set D (₹20L+).';
+    if (window.confirm(label)) {
       if (socket) {
-        socket.emit('admin:startAutoAuction');
+        socket.emit('admin:startAutoAuction', { mode });
       }
     }
   };
@@ -144,12 +147,21 @@ const AuctionControl = ({
           
           {autoAuctionStatus.isActive ? (
             <div className="space-y-4">
-              {/* Status + current set badge */}
+              {/* Status + mode badge + current set badge */}
               <div className="flex flex-wrap items-center gap-2">
                 <div className="inline-flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg font-semibold text-sm">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span>Running</span>
                 </div>
+                {autoAuctionStatus.mode === 'random' ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm border-2 bg-purple-100 text-purple-800 border-purple-400">
+                    🎲 Random Mode
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm border-2 bg-blue-100 text-blue-800 border-blue-400">
+                    📋 Set-Wise Mode
+                  </div>
+                )}
                 {autoAuctionStatus.currentSet && (
                   <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm border-2 ${
                     autoAuctionStatus.currentSet === 'A' ? 'bg-amber-100 text-amber-800 border-amber-400' :
@@ -235,25 +247,49 @@ const AuctionControl = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500 space-y-3">
-                <p className="text-gray-700 text-sm leading-relaxed">Players auction in set order from highest to lowest base price:</p>
+              <p className="text-gray-600 text-sm">Choose how to run the auto auction:</p>
+
+              {/* Set-wise option */}
+              <div className="bg-white rounded-xl p-4 border-2 border-blue-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package size={16} className="text-blue-600" />
+                  <span className="font-bold text-gray-800 text-sm">Set-Wise (A → B → C → D)</span>
+                </div>
+                <p className="text-gray-500 text-xs leading-relaxed">Players auctioned in set order by base price with a 30-second set introduction before each set.</p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {[{s:'A',p:150,c:'bg-amber-50 border-amber-300 text-amber-800'},{s:'B',p:100,c:'bg-blue-50 border-blue-300 text-blue-800'},{s:'C',p:50,c:'bg-emerald-50 border-emerald-300 text-emerald-800'},{s:'D',p:20,c:'bg-slate-50 border-slate-300 text-slate-700'}].map(({s,p,c}) => (
                     <div key={s} className={`rounded-lg border-2 p-2 text-center ${c}`}>
-                      <div className="font-black text-base leading-none">Set {s}</div>
-                      <div className="text-[11px] font-bold opacity-80 mt-1">₹{p}L</div>
+                      <div className="font-black text-sm leading-none">Set {s}</div>
+                      <div className="text-[10px] font-bold opacity-80 mt-1">₹{p}L+</div>
                     </div>
                   ))}
                 </div>
+                <button
+                  onClick={() => startAutoAuction('set')}
+                  disabled={isTeamSummaryShowing}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ${isTeamSummaryShowing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Package size={18} />
+                  Start Set-Wise Auction
+                </button>
               </div>
-              <button
-                onClick={startAutoAuction}
-                disabled={isTeamSummaryShowing}
-                className={`w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 ${isTeamSummaryShowing ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Zap size={20} />
-                Start Auto Auction
-              </button>
+
+              {/* Random option */}
+              <div className="bg-white rounded-xl p-4 border-2 border-purple-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap size={16} className="text-purple-600" />
+                  <span className="font-bold text-gray-800 text-sm">Random (All Players)</span>
+                </div>
+                <p className="text-gray-500 text-xs leading-relaxed">All 30 available players auctioned one by one in a completely random order, ignoring their base price or set category.</p>
+                <button
+                  onClick={() => startAutoAuction('random')}
+                  disabled={isTeamSummaryShowing}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-bold hover:from-purple-700 hover:to-purple-800 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 ${isTeamSummaryShowing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Zap size={18} />
+                  Start Random Auction
+                </button>
+              </div>
             </div>
           )}
         </div>

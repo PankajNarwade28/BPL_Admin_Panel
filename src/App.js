@@ -212,7 +212,7 @@ function App() {
   const loadData = async () => {
     try {
       const [playersRes, teamsRes, statsRes] = await Promise.all([
-        axios.get(`${API_URL}/players`),
+        axios.get(`${API_URL}/players/all`),
         axios.get(`${API_URL}/teams`),
         axios.get(`${API_URL}/auction/stats`),
       ]);
